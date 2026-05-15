@@ -13,12 +13,24 @@ class Host:
         self.Port = Port
         self.routing_table = routing_table
     
-
-    #on input size, not input data?
-    def make_checksum(self, input_size):
-        print("Host A: Layer 4: Checksum computed")
-        return("balbalbal") #somewhere, somewhere, maybe not hardcode required (can pass which layer came from, decide where to send, map in config?)
-
+    def make_checksum(self, headers, data):
+        input_size = headers.length
+        header_bytes = headers.get_as_bytes()
+        data = header_bytes + data
+        #Buffer
+        if input_size % 2 != 0:
+            data = data + b'\x00'
+        checksum = 0 
+        for i in range(0, input_size, 2):
+            word = int.from_bytes(data[i:i+2], byteorder='big')
+            checksum += word 
+            #Wraparound, checksum has 17 bits
+            if checksum > 0xFFFF:
+                #Restrict to 16 bits and add 1
+                checksum = (checksum & 0xFFFF) + 0x0001
+        #1s complement
+        checksum = ~checksum & 0xFFFF
+        return checksum
 
     #Can link hardware straight from list in config
     def create_frame(self, packet, destination): 
@@ -32,8 +44,6 @@ class Host:
         print(f"{self.Name}: Layer 2: Frame created: SRC_MAC={source_MAC}, DST_MAC={dest_MAC}")
         print(f"{self.Name}: Layer 2: Frame sent")
         return(frame)
-
-
 
     def create_packet(self, segment, destination):
         dest_IP = destination.IP
@@ -52,26 +62,27 @@ class Host:
         print(f"{self.Name}: Layer 3: Packet forwarded to Data Link Layer")
         return(self.create_frame(packet, next_hop))
 
-    def create_segment(self, input_size, destination):
+    def create_segment(self, input_size, destination, data):
         dest_port = destination.Port
         source_port = self.Port
         length = input_size + 10 #Due to header size
-        checksum = "I'll fix this when i learn how checksum works"
-        print(self.make_checksum(input_size))
-        print("Boy is this sum checked NO ITS NOT FIX THIS LATER I DONT KNOW HOW IT WORKS FOR NOW")
         Type = 0
         Sequence_number = 0
-        Data = "A" * input_size
-        segment_head = Segment_header(dest_port, source_port, length, checksum, Type, Sequence_number)
-        segment = Segment(segment_head, Data)    
+        segment_head = Segment_header(dest_port, source_port, length, 0, Type, Sequence_number)
+        checksum = self.make_checksum(segment_head, data)
+        print(f"{self.Name}: Layer 4: Checksum computed")
+        segment_head.checksum = checksum
+        segment = Segment(segment_head, data)    
         print("Host A: Layer 4: Segment created by adding transport layer header (DATA, seq=0) (encapsulation)")
         print("Host A: Layer 4: Segment sent to Network Layer")
         return(self.create_packet(segment, destination))
 
-
     def receive_segment(self, segment, ack):
         print(f"{self.Name}: Layer 4: Segment received from Network Layer")
-        print("NO THERES NO CHECKSUM HERE PLS FIX IT EVAN ---------------------------------------------------------------------")
+        checksum = self.make_checksum(segment.headers, segment.data)
+        if checksum != segment.headers.checksum:
+            print(f"{self.Name}: Layer 4: Checksum verification failed")
+            return
         print(f"{self.Name}: Layer 4: Checksum verified")
         if ack:
             print(f"{self.Name}: Layer 4: ACK received: seq=0")
@@ -85,7 +96,6 @@ class Host:
         print(f"{self.Name}: Layer 3: Segment delivered to Transport Layer")
         self.receive_segment(packet.data, ack)
 
-
     def receive_frame(self, frame, ack):
         if frame.headers.dest_MAC == "BB:BB:BB:BB:BB:BB":
             interface = "Interface 1"
@@ -96,25 +106,21 @@ class Host:
         print(f"{self.Name}: Layer 2: Packet delivered to Network Layer")
         self.receive_packet(frame.data, ack)
 
-
     def create_ack(self, input_size, destination):
         dest_port = destination.Port
         source_port = self.Port
-        length = input_size + 10 #Due to header size
+        length = 10 #Due to header size
         Type = 1
         Sequence_number = 0
-        Data = "A" * input_size
-        checksum = "Fake Checksum"
-        segment_head = Segment_header(dest_port, source_port, length, checksum, Type, Sequence_number)
-        segment = Segment(segment_head, Data)    
+        segment_head = Segment_header(dest_port, source_port, length, 0, Type, Sequence_number)
+        checksum = self.make_checksum(segment_head, b'')
+        print(f"{self.Name}: Layer 4: Checksum computed")
+        segment_head.checksum = checksum
+        segment = Segment(segment_head, b'')    
         print(f"{self.Name}: Layer 4: Segment created by adding transport layer header (ACK, seq=0)")
         print(f"{self.Name}: Layer 4: Segment sent to Network Layer")
         return(self.create_packet(segment, destination))
     
-
-
-
-
 
 class Router:
     def __init__(self, Name, IP, MAC, routing_table):
@@ -122,7 +128,6 @@ class Router:
         self.IP = IP
         self.MAC = MAC
         self.routing_table = routing_table
-
 
     def forward_frame(self, packet, destination):
         print(f"{self.Name}: Layer 2: Packet received from Network Layer ")
@@ -139,7 +144,6 @@ class Router:
         print(f"{self.Name}: Layer 2: Frame sent")
         return(frame)
 
-
     def receive_packet(self, packet):
         print(f"{self.Name}: Layer 3: Segment received from Data Link Layer: SRC_IP={packet.headers.source_IP}, DST_IP={packet.headers.dest_IP}, TTL=100")
         print(f"{self.Name}: Layer 3: Destination IP read: {packet.headers.dest_IP}")
@@ -155,7 +159,6 @@ class Router:
         print(f"{self.Name}: Layer 3: Outgoing interface selected ({interface})")
         print(f"{self.Name}: Layer 3: Packet forwarded to Data Link Layer")
         return(self.forward_frame(packet, next_hop))
-
 
     def receive_frame(self, frame):
         if frame.headers.dest_MAC == "BB:BB:BB:BB:BB:BB":

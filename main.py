@@ -1,4 +1,5 @@
 import sys
+import os
 from config import *
 from protocol import *
 from devices import *
@@ -11,12 +12,14 @@ Router1 = Router("Router R1", [Router_interface_1[0], Router_interface_2[0]], [R
 
 
 input_size = int(sys.argv[1])
+data = os.urandom(input_size) #Bytes
+
 print("Host A: Layer 4: Data received from Application Layer. Data size= ",input_size)
 
-frame = HostA.create_segment(input_size, HostB)
-frame = Router1.receive_frame(frame)
+segment = HostA.create_segment(input_size, HostB, data)
+frame = Router1.receive_frame(segment)
 HostB.receive_frame(frame, 0)
 
-ack = HostB.create_ack(1, HostA)
+ack = HostB.create_ack(input_size, HostA)
 ack = Router1.receive_frame(ack)
 HostA.receive_frame(ack, 1)
