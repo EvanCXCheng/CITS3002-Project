@@ -14,3 +14,4 @@ IP_MAC_Table = {
     "10.0.2.1" : "CC:CC:CC:CC:CC:CC",
     "10.0.2.20" : "DD:DD:DD:DD:DD:DD"
 }
+MAX_SIZE =  500

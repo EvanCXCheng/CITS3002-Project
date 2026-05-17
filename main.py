@@ -13,7 +13,6 @@ Router1 = Router("Router R1", [Router_interface_1[0], Router_interface_2[0]], [R
 
 input_size = int(sys.argv[1])
 data = os.urandom(input_size) #Bytes
-
 print("Host A: Layer 4: Data received from Application Layer. Data size= ",input_size)
 
 segment = HostA.create_segment(input_size, HostB, data)
