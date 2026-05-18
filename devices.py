@@ -35,7 +35,7 @@ class Host:
     #Can link hardware straight from list in config
     def create_frame(self, packet, destination): 
         print(f"{self.Name}: Layer 2: Packet received from Network Layer ")
-        dest_MAC = IP_MAC_Table[destination] #This is probably legal idk if im allowed to use that
+        dest_MAC = IP_MAC_Table[destination] 
         source_MAC = self.MAC
         print(f"{self.Name}: Layer 2: Destination MAC lookup for next-hop IP ({destination}) → {dest_MAC}")
         Type = "0x0800"
@@ -131,7 +131,7 @@ class Router:
 
     def forward_frame(self, packet, destination):
         print(f"{self.Name}: Layer 2: Packet received from Network Layer ")
-        dest_MAC = IP_MAC_Table[destination] #This is probably legal idk if im allowed to use that
+        dest_MAC = IP_MAC_Table[destination]
         if dest_MAC == "DD:DD:DD:DD:DD:DD":
             source_MAC = self.MAC[1]
         else:
@@ -148,6 +148,9 @@ class Router:
         print(f"{self.Name}: Layer 3: Segment received from Data Link Layer: SRC_IP={packet.headers.source_IP}, DST_IP={packet.headers.dest_IP}, TTL=100")
         print(f"{self.Name}: Layer 3: Destination IP read: {packet.headers.dest_IP}")
         packet.headers.TTL -= 1
+        if packet.headers.TTL <= 0:
+            print(f"{self.Name}: Layer 3: TTL expired. Packet dropped.")
+            return
         print(f"{self.Name}: Layer 3: TTL decremented: {packet.headers.TTL + 1} → {packet.headers.TTL}")
         next_hop = self.routing_table[packet.headers.dest_IP][0]
         print(f"{self.Name}: Layer 3: Routing table lookup performed")
