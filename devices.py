@@ -62,13 +62,14 @@ class Host:
         print(f"{self.Name}: Layer 3: Packet forwarded to Data Link Layer")
         return(self.create_frame(packet, next_hop))
 
-    def create_segment(self, input_size, destination, data):
+    def create_segment(self, input_size, destination, data, rdt):
         dest_port = destination.Port
         source_port = self.Port
         length = input_size + 10 #Due to header size
         Type = 0
         Sequence_number = 0
         segment_head = Segment_header(dest_port, source_port, length, 0, Type, Sequence_number)
+        segment_head.Sequence_Number = rdt
         checksum = self.make_checksum(segment_head, data)
         print(f"{self.Name}: Layer 4: Checksum computed")
         segment_head.checksum = checksum
@@ -77,27 +78,36 @@ class Host:
         print("Host A: Layer 4: Segment sent to Network Layer")
         return(self.create_packet(segment, destination))
 
-    def receive_segment(self, segment, ack):
+    def receive_segment(self, segment, expected_rdt):
         print(f"{self.Name}: Layer 4: Segment received from Network Layer")
         checksum = self.make_checksum(segment.headers, segment.data)
         if checksum != segment.headers.checksum:
+            print(checksum, segment.headers.checksum)
             print(f"{self.Name}: Layer 4: Checksum verification failed")
             return
         print(f"{self.Name}: Layer 4: Checksum verified")
-        if ack:
-            print(f"{self.Name}: Layer 4: ACK received: seq=0")
+        if segment.headers.Sequence_Number == expected_rdt:
+            if segment.headers.Type == 1:
+                print(f"{self.Name}: Layer 4: ACK received: seq={segment.headers.Sequence_Number}")
+            else:
+                print(f"{self.Name}: Layer 4: DATA segment delivered to Application Layer. Data size={segment.headers.length-10}")
         else:
-            print(f"{self.Name}: Layer 4: DATA segment delivered to Application Layer. Data size={segment.headers.length-10}")
-        
+            #Happens if the sequence number isnt what is expected
+            if segment.headers.Type == 0:
+                #This happens when its NOT an ack msg. This means that the receiver should send an ACK with the old sequence number
+                return("Old Ack")
+            else:
+                #This happens when it IS an ack msg. This means that the sender should resend the data it just sent.
+                return("Old Seg")
     
-    def receive_packet(self, packet, ack):
+    def receive_packet(self, packet, expected_rdt):
         print(f"{self.Name}: Layer 3: Segment received from Data Link Layer: SRC_IP={packet.headers.source_IP}, DST_IP={packet.headers.dest_IP}, TTL=100")
         print(f"{self.Name}: Layer 3: Destination IP read: {packet.headers.dest_IP}")
         print(f"{self.Name}: Layer 3: Packet identified as local delivery")
         print(f"{self.Name}: Layer 3: Segment delivered to Transport Layer")
-        self.receive_segment(packet.data, ack)
+        return (self.receive_segment(packet.data, expected_rdt))
 
-    def receive_frame(self, frame, ack):
+    def receive_frame(self, frame, expected_rdt):
         if frame.headers.dest_MAC == "BB:BB:BB:BB:BB:BB":
             interface = "Interface 1"
         else:
@@ -105,15 +115,16 @@ class Host:
         print(f"{self.Name}: Layer 2: Frame received")
         print(f"{self.Name}: Layer 2: Source MAC learned: {frame.headers.source_MAC}")
         print(f"{self.Name}: Layer 2: Packet delivered to Network Layer")
-        self.receive_packet(frame.data, ack)
+        return(self.receive_packet(frame.data, expected_rdt))
 
-    def create_ack(self, input_size, destination):
+    def create_ack(self, input_size, destination, rdt):
         dest_port = destination.Port
         source_port = self.Port
         length = 10 #Due to header size
         Type = 1
         Sequence_number = 0
         segment_head = Segment_header(dest_port, source_port, length, 0, Type, Sequence_number)
+        segment_head.Sequence_Number = rdt
         checksum = self.make_checksum(segment_head, b'')
         print(f"{self.Name}: Layer 4: Checksum computed")
         segment_head.checksum = checksum
