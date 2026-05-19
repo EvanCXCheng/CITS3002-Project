@@ -88,6 +88,7 @@ class Host:
             print(f"{self.Name}: Layer 4: ACK received: seq=0")
         else:
             print(f"{self.Name}: Layer 4: DATA segment delivered to Application Layer. Data size={segment.headers.length-10}")
+        
     
     def receive_packet(self, packet, ack):
         print(f"{self.Name}: Layer 3: Segment received from Data Link Layer: SRC_IP={packet.headers.source_IP}, DST_IP={packet.headers.dest_IP}, TTL=100")
