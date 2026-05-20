@@ -14,12 +14,35 @@ Router1 = Router("Router R1", [Router_interface_1[0], Router_interface_2[0]], [R
 input_size = int(sys.argv[1])
 data = os.urandom(input_size) #Bytes
 print("Host A: Layer 4: Data received from Application Layer. Data size= ",input_size)
-for i in range(0, input_size, MAX_SIZE):
+rdt = 0
+i = 0
+while i < input_size:
     print(f"Sent thing\n{min(MAX_SIZE, input_size - i)}\n\n")
-    segment = HostA.create_segment(min(MAX_SIZE, input_size - i), HostB, data[i:i+MAX_SIZE])
+    segment = HostA.create_segment(min(MAX_SIZE, input_size - i), HostB, data[i:i+MAX_SIZE], rdt)
     frame = Router1.receive_frame(segment)
-    HostB.receive_frame(frame, 0)
+    seq_check = HostB.receive_frame(frame, rdt)
 
-    ack = HostB.create_ack(input_size, HostA)
-    ack = Router1.receive_frame(ack)
-    HostA.receive_frame(ack, 1)
+
+    if seq_check == "Old Ack":
+        #This means that the error happened at the receiver and that it should then send an ACK with an old sequence number
+        ack = HostB.create_ack(input_size, HostA, 1 - rdt)
+        ack = Router1.receive_frame(ack)
+        seq_check = HostA.receive_frame(ack, rdt)
+        
+    else:
+        #Otherwise send a normal ack
+        ack = HostB.create_ack(input_size, HostA, rdt)
+        ack = Router1.receive_frame(ack)
+        seq_check = HostA.receive_frame(ack, rdt)
+
+
+    if seq_check == "Old Seg":
+        #If a normal ACK was sent this wont trigger. 
+        #If an old ACK is sent, resend the current one
+        continue
+
+
+    
+    rdt = 1 - rdt
+
+    i+=MAX_SIZE
