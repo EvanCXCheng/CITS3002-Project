@@ -2,8 +2,7 @@ import sys
 from config import *
 from protocol import *
 
-
-#Host and router classes
+#Host class with implementation logic
 class Host:
     def __init__(self, Name, IP, Subnet, MAC, Port, routing_table):
         self.Name = Name
@@ -26,13 +25,11 @@ class Host:
             checksum += word 
             #Wraparound, checksum has 17 bits
             if checksum > 0xFFFF:
-                #Restrict to 16 bits and add 1
                 checksum = (checksum & 0xFFFF) + 0x0001
-        #1s complement
         checksum = ~checksum & 0xFFFF
         return checksum
 
-    #Can link hardware straight from list in config
+    #Host receives data from Network Layer in Data Link Layer, bundle packet into frame
     def create_frame(self, packet, destination): 
         print(f"{self.Name}: Layer 2: Packet received from Network Layer ")
         dest_MAC = IP_MAC_Table[destination] 
@@ -43,8 +40,10 @@ class Host:
         frame = Frame(frame_head, packet)
         print(f"{self.Name}: Layer 2: Frame created: SRC_MAC={source_MAC}, DST_MAC={dest_MAC}")
         print(f"{self.Name}: Layer 2: Frame sent")
+        #Send frame to router (logic handled in main.py)
         return(frame)
 
+    #Host receives data from Transport Layer in Network Layer, bundle segment into packet
     def create_packet(self, segment, destination):
         dest_IP = destination.IP
         source_IP = self.IP
@@ -60,39 +59,43 @@ class Host:
         packet_head = Packet_header(dest_IP, source_IP, TTL, Protocol, Total_length)
         packet = Packet(packet_head, segment)
         print(f"{self.Name}: Layer 3: Packet forwarded to Data Link Layer")
+        #Send to data link layer
         return(self.create_frame(packet, next_hop))
 
+    #Data received from application layer, Host bundles data into segment
     def create_segment(self, input_size, destination, data, rdt):
         dest_port = destination.Port
         source_port = self.Port
         length = input_size + 10 #Due to header size
         Type = 0
-        Sequence_number = 0
+        Sequence_number = rdt
         segment_head = Segment_header(dest_port, source_port, length, 0, Type, Sequence_number)
-        segment_head.Sequence_Number = rdt
         checksum = self.make_checksum(segment_head, data)
         print(f"{self.Name}: Layer 4: Checksum computed")
         segment_head.checksum = checksum
         segment = Segment(segment_head, data)    
-        print("Host A: Layer 4: Segment created by adding transport layer header (DATA, seq=0) (encapsulation)")
+        print(f"Host A: Layer 4: Segment created by adding transport layer header (DATA, seq={rdt}) (encapsulation)")
         print("Host A: Layer 4: Segment sent to Network Layer")
+        #Send to network layer
         return(self.create_packet(segment, destination))
 
+    #Host receives segment from Network Layer
     def receive_segment(self, segment, expected_rdt):
         print(f"{self.Name}: Layer 4: Segment received from Network Layer")
+        #Verify the data is correct
         checksum = self.make_checksum(segment.headers, segment.data)
         if checksum != segment.headers.checksum:
             print(checksum, segment.headers.checksum)
             print(f"{self.Name}: Layer 4: Checksum verification failed")
-            return
+            return("Bad Checksum")
         print(f"{self.Name}: Layer 4: Checksum verified")
+        #Rdt 2.2
         if segment.headers.Sequence_Number == expected_rdt:
             if segment.headers.Type == 1:
                 print(f"{self.Name}: Layer 4: ACK received: seq={segment.headers.Sequence_Number}")
             else:
                 print(f"{self.Name}: Layer 4: DATA segment delivered to Application Layer. Data size={segment.headers.length-10}")
         else:
-            #Happens if the sequence number isnt what is expected
             if segment.headers.Type == 0:
                 #This happens when its NOT an ack msg. This means that the receiver should send an ACK with the old sequence number
                 return("Old Ack")
@@ -100,13 +103,16 @@ class Host:
                 #This happens when it IS an ack msg. This means that the sender should resend the data it just sent.
                 return("Old Seg")
     
+    #Host receives packet from Data Link Layer, unbundle segment
     def receive_packet(self, packet, expected_rdt):
         print(f"{self.Name}: Layer 3: Segment received from Data Link Layer: SRC_IP={packet.headers.source_IP}, DST_IP={packet.headers.dest_IP}, TTL=100")
         print(f"{self.Name}: Layer 3: Destination IP read: {packet.headers.dest_IP}")
         print(f"{self.Name}: Layer 3: Packet identified as local delivery")
         print(f"{self.Name}: Layer 3: Segment delivered to Transport Layer")
+        #Send segment to Transport Layer
         return (self.receive_segment(packet.data, expected_rdt))
 
+    #Host receives a frame from the router, unbundle the Network Layer packet
     def receive_frame(self, frame, expected_rdt):
         if frame.headers.dest_MAC == "BB:BB:BB:BB:BB:BB":
             interface = "Interface 1"
@@ -115,8 +121,10 @@ class Host:
         print(f"{self.Name}: Layer 2: Frame received")
         print(f"{self.Name}: Layer 2: Source MAC learned: {frame.headers.source_MAC}")
         print(f"{self.Name}: Layer 2: Packet delivered to Network Layer")
+        #Send packet to Network Layer
         return(self.receive_packet(frame.data, expected_rdt))
 
+    #Similar to create segment, set type to 1 for ACK message
     def create_ack(self, input_size, destination, rdt):
         dest_port = destination.Port
         source_port = self.Port
@@ -129,11 +137,11 @@ class Host:
         print(f"{self.Name}: Layer 4: Checksum computed")
         segment_head.checksum = checksum
         segment = Segment(segment_head, b'')    
-        print(f"{self.Name}: Layer 4: Segment created by adding transport layer header (ACK, seq=0)")
+        print(f"{self.Name}: Layer 4: Segment created by adding transport layer header (ACK, seq={rdt})")
         print(f"{self.Name}: Layer 4: Segment sent to Network Layer")
         return(self.create_packet(segment, destination))
     
-
+#Router class with implementation logic
 class Router:
     def __init__(self, Name, IP, MAC, routing_table):
         self.Name = Name
@@ -141,6 +149,7 @@ class Router:
         self.MAC = MAC
         self.routing_table = routing_table
 
+    #Router receives packet from Network Layer, bundles into frame, sends to Host on Data Link Layer
     def forward_frame(self, packet, destination):
         print(f"{self.Name}: Layer 2: Packet received from Network Layer ")
         dest_MAC = IP_MAC_Table[destination]
@@ -156,6 +165,7 @@ class Router:
         print(f"{self.Name}: Layer 2: Frame sent")
         return(frame)
 
+    #Router receives packet from Data Link Layer, makes routing decision
     def receive_packet(self, packet):
         print(f"{self.Name}: Layer 3: Segment received from Data Link Layer: SRC_IP={packet.headers.source_IP}, DST_IP={packet.headers.dest_IP}, TTL=100")
         print(f"{self.Name}: Layer 3: Destination IP read: {packet.headers.dest_IP}")
@@ -175,6 +185,7 @@ class Router:
         print(f"{self.Name}: Layer 3: Packet forwarded to Data Link Layer")
         return(self.forward_frame(packet, next_hop))
 
+    #Router receives frame from Data Link Layer, send to Network Layer
     def receive_frame(self, frame):
         if frame.headers.dest_MAC == "BB:BB:BB:BB:BB:BB":
             interface = "Interface 1"

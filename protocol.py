@@ -1,4 +1,4 @@
-#Header definitions and classes for layers
+#Header definitions and classes for each layer
 class Frame_headers:
     def __init__(self, dest_MAC, source_MAC, Type):
         self.dest_MAC = dest_MAC
@@ -22,6 +22,7 @@ class Segment_header:
         self.Type = Type
         self.Sequence_Number = Sequence_Number
 
+    #Convert Header to bytes to make Checksum calculation easier
     def get_as_bytes(self):
         #0 the checksum
         return (self.dest_port.to_bytes(2, byteorder='big') + self.source_port.to_bytes(2, byteorder='big') + self.length.to_bytes(2, byteorder='big') 
