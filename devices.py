@@ -58,7 +58,7 @@ class Host:
         Total_length = segment.headers.length + 12
         packet_head = Packet_header(dest_IP, source_IP, TTL, Protocol, Total_length)
         packet = Packet(packet_head, segment)
-        print(f"{self.Name}: Layer 3: Packet forwarded to Data Link Layer")
+        print(f"{self.Name}: Layer 3: Packet forwarded to Data Link Layer \n")
         #Send to data link layer
         return(self.create_frame(packet, next_hop))
 
