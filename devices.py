@@ -39,7 +39,7 @@ class Host:
         frame_head = Frame_headers(dest_MAC, source_MAC, Type)
         frame = Frame(frame_head, packet)
         print(f"{self.Name}: Layer 2: Frame created: SRC_MAC={source_MAC}, DST_MAC={dest_MAC}")
-        print(f"{self.Name}: Layer 2: Frame sent")
+        print(f"{self.Name}: Layer 2: Frame sent \n")
         #Send frame to router (logic handled in main.py)
         return(frame)
 
@@ -75,7 +75,7 @@ class Host:
         segment_head.checksum = checksum
         segment = Segment(segment_head, data)    
         print(f"Host A: Layer 4: Segment created by adding transport layer header (DATA, seq={rdt}) (encapsulation)")
-        print("Host A: Layer 4: Segment sent to Network Layer")
+        print("Host A: Layer 4: Segment sent to Network Layer \n")
         #Send to network layer
         return(self.create_packet(segment, destination))
 
@@ -92,7 +92,7 @@ class Host:
         #Rdt 2.2
         if segment.headers.Sequence_Number == expected_rdt:
             if segment.headers.Type == 1:
-                print(f"{self.Name}: Layer 4: ACK received: seq={segment.headers.Sequence_Number}")
+                print(f"{self.Name}: Layer 4: ACK received: seq={segment.headers.Sequence_Number} \n")
             else:
                 print(f"{self.Name}: Layer 4: DATA segment delivered to Application Layer. Data size={segment.headers.length-10}")
         else:
@@ -108,7 +108,7 @@ class Host:
         print(f"{self.Name}: Layer 3: Segment received from Data Link Layer: SRC_IP={packet.headers.source_IP}, DST_IP={packet.headers.dest_IP}, TTL=100")
         print(f"{self.Name}: Layer 3: Destination IP read: {packet.headers.dest_IP}")
         print(f"{self.Name}: Layer 3: Packet identified as local delivery")
-        print(f"{self.Name}: Layer 3: Segment delivered to Transport Layer")
+        print(f"{self.Name}: Layer 3: Segment delivered to Transport Layer \n")
         #Send segment to Transport Layer
         return (self.receive_segment(packet.data, expected_rdt))
 
@@ -120,7 +120,7 @@ class Host:
             interface = "Interface 2"
         print(f"{self.Name}: Layer 2: Frame received")
         print(f"{self.Name}: Layer 2: Source MAC learned: {frame.headers.source_MAC}")
-        print(f"{self.Name}: Layer 2: Packet delivered to Network Layer")
+        print(f"{self.Name}: Layer 2: Packet delivered to Network Layer \n")
         #Send packet to Network Layer
         return(self.receive_packet(frame.data, expected_rdt))
 
@@ -134,11 +134,10 @@ class Host:
         segment_head = Segment_header(dest_port, source_port, length, 0, Type, Sequence_number)
         segment_head.Sequence_Number = rdt
         checksum = self.make_checksum(segment_head, b'')
-        print(f"{self.Name}: Layer 4: Checksum computed")
         segment_head.checksum = checksum
         segment = Segment(segment_head, b'')    
         print(f"{self.Name}: Layer 4: Segment created by adding transport layer header (ACK, seq={rdt})")
-        print(f"{self.Name}: Layer 4: Segment sent to Network Layer")
+        print(f"{self.Name}: Layer 4: Segment sent to Network Layer \n")
         return(self.create_packet(segment, destination))
     
 #Router class with implementation logic
@@ -155,14 +154,16 @@ class Router:
         dest_MAC = IP_MAC_Table[destination]
         if dest_MAC == "DD:DD:DD:DD:DD:DD":
             source_MAC = self.MAC[1]
+            interface = "Interface 2"
         else:
             source_MAC = self.MAC[0]
+            interface = "Interface 1"
         print(f"{self.Name}: Layer 2: Destination MAC lookup for next-hop IP ({destination}) → {dest_MAC}")
         Type = "0x0800"
         frame_head = Frame_headers(dest_MAC, source_MAC, Type)
         frame = Frame(frame_head, packet)
         print(f"{self.Name}: Layer 2: Frame created: SRC_MAC={source_MAC}, DST_MAC={dest_MAC}")
-        print(f"{self.Name}: Layer 2: Frame sent")
+        print(f"{self.Name}: Layer 2: Frame forwarded on {interface} \n")
         return(frame)
 
     #Router receives packet from Data Link Layer, makes routing decision
@@ -182,7 +183,7 @@ class Router:
         else:
             interface = "Interface 1"
         print(f"{self.Name}: Layer 3: Outgoing interface selected ({interface})")
-        print(f"{self.Name}: Layer 3: Packet forwarded to Data Link Layer")
+        print(f"{self.Name}: Layer 3: Packet forwarded to Data Link Layer \n")
         return(self.forward_frame(packet, next_hop))
 
     #Router receives frame from Data Link Layer, send to Network Layer
@@ -193,6 +194,6 @@ class Router:
             interface = "Interface 2"
         print(f"{self.Name}: Layer 2: Frame received on {interface}")
         print(f"{self.Name}: Layer 2: Source MAC learned: {frame.headers.source_MAC} on {interface}")
-        print(f"{self.Name}: Layer 2: Packet delivered to Network Layer")
+        print(f"{self.Name}: Layer 2: Packet delivered to Network Layer \n")
         return(self.receive_packet(frame.data))
 
