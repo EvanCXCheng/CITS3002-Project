@@ -87,6 +87,7 @@ class Host:
         if checksum != segment.headers.checksum:
             print(checksum, segment.headers.checksum)
             print(f"{self.Name}: Layer 4: Checksum verification failed")
+            print(f"{self.Name}: Layer 4: Segment discarded due to checksum error")
             return("Bad Checksum")
         print(f"{self.Name}: Layer 4: Checksum verified")
         #Rdt 2.2
