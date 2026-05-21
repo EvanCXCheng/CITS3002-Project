@@ -105,7 +105,7 @@ class Host:
     
     #Host receives packet from Data Link Layer, unbundle segment
     def receive_packet(self, packet, expected_rdt):
-        print(f"{self.Name}: Layer 3: Segment received from Data Link Layer: SRC_IP={packet.headers.source_IP}, DST_IP={packet.headers.dest_IP}, TTL=100")
+        print(f"{self.Name}: Layer 3: Packet received from Data Link Layer: SRC_IP={packet.headers.source_IP}, DST_IP={packet.headers.dest_IP}, TTL={packet.headers.TTL}")
         print(f"{self.Name}: Layer 3: Destination IP read: {packet.headers.dest_IP}")
         print(f"{self.Name}: Layer 3: Packet identified as local delivery")
         print(f"{self.Name}: Layer 3: Segment delivered to Transport Layer \n")
@@ -168,7 +168,7 @@ class Router:
 
     #Router receives packet from Data Link Layer, makes routing decision
     def receive_packet(self, packet):
-        print(f"{self.Name}: Layer 3: Segment received from Data Link Layer: SRC_IP={packet.headers.source_IP}, DST_IP={packet.headers.dest_IP}, TTL=100")
+        print(f"{self.Name}: Layer 3: Packet received from Data Link Layer: SRC_IP={packet.headers.source_IP}, DST_IP={packet.headers.dest_IP}, TTL={packet.headers.TTL}")
         print(f"{self.Name}: Layer 3: Destination IP read: {packet.headers.dest_IP}")
         packet.headers.TTL -= 1
         if packet.headers.TTL <= 0:
