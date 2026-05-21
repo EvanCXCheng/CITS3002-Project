@@ -1,4 +1,4 @@
-#parameters (IP, MAC, routing tables)
+#Fixed known parameters for hosts and router
 Network_1 = "10.0.1.0/24"
 Network_2 = "10.0.2.0/24"
 Router_interface_1 = ["10.0.1.1", "BB:BB:BB:BB:BB:BB"]
