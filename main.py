@@ -22,13 +22,13 @@ while i < input_size:
         #This means that the error happened at the receiver and that it should then send an ACK with an old sequence number
         ack = HostB.create_ack(input_size, HostA, 1 - rdt)
         ack = Router1.receive_frame(ack)
-        seq_check = HostA.receive_frame(ack, rdt)
+        error_check = HostA.receive_frame(ack, rdt)
         
     else:
         #Otherwise send a normal ack
         ack = HostB.create_ack(input_size, HostA, rdt)
         ack = Router1.receive_frame(ack)
-        seq_check = HostA.receive_frame(ack, rdt)
+        error_check = HostA.receive_frame(ack, rdt)
 
     if error_check == "Old Seg":
         #If a normal ACK was sent this wont trigger. 
