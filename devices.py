@@ -74,8 +74,8 @@ class Host:
         print(f"{self.Name}: Layer 4: Checksum computed")
         segment_head.checksum = checksum
         segment = Segment(segment_head, data)    
-        print(f"Host A: Layer 4: Segment created by adding transport layer header (DATA, seq={rdt}) (encapsulation)")
-        print("Host A: Layer 4: Segment sent to Network Layer \n")
+        print(f"{self.Name}: Layer 4: Segment created by adding transport layer header (DATA, seq={rdt}) (encapsulation)")
+        print(f"{self.Name}: Layer 4: Segment sent to Network Layer \n")
         #Send to network layer
         return(self.create_packet(segment, destination))
 
