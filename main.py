@@ -37,8 +37,9 @@ while i < input_size:
     if error_check == "Old Seg":
         #If a normal ACK was sent this wont trigger. 
         #If an old ACK is sent, resend the current one
-        print(f"{source.Name}: Layer 4: Old ACK received. Resending current segment.")
+        print(f"{source.Name}: Layer 4: Old ACK received. Retransmitting current segment.")
         continue
-
+    
+    #Alternate between seq 0 and 1
     rdt = 1 - rdt
     i+=MAX_SIZE

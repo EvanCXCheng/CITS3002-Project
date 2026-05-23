@@ -85,7 +85,6 @@ class Host:
         #Verify the data is correct
         checksum = self.make_checksum(segment.headers, segment.data)
         if checksum != segment.headers.checksum:
-            print(checksum, segment.headers.checksum)
             print(f"{self.Name}: Layer 4: Checksum verification failed")
             print(f"{self.Name}: Layer 4: Segment discarded due to checksum error")
             return("Bad Checksum")
@@ -115,10 +114,6 @@ class Host:
 
     #Host receives a frame from the router, unbundle the Network Layer packet
     def receive_frame(self, frame, expected_rdt):
-        if frame.headers.dest_MAC == "BB:BB:BB:BB:BB:BB":
-            interface = "Interface 1"
-        else:
-            interface = "Interface 2"
         print(f"{self.Name}: Layer 2: Frame received")
         print(f"{self.Name}: Layer 2: Source MAC learned: {frame.headers.source_MAC}")
         print(f"{self.Name}: Layer 2: Packet delivered to Network Layer \n")
@@ -131,9 +126,8 @@ class Host:
         source_port = self.Port
         length = 10 #Due to header size
         Type = 1
-        Sequence_number = 0
+        Sequence_number = rdt
         segment_head = Segment_header(dest_port, source_port, length, 0, Type, Sequence_number)
-        segment_head.Sequence_Number = rdt
         checksum = self.make_checksum(segment_head, b'')
         segment_head.checksum = checksum
         segment = Segment(segment_head, b'')    
