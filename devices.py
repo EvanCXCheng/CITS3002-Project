@@ -85,7 +85,6 @@ class Host:
         #Verify the data is correct
         checksum = self.make_checksum(segment.headers, segment.data)
         if checksum != segment.headers.checksum:
-            print(checksum, segment.headers.checksum)
             print(f"{self.Name}: Layer 4: Checksum verification failed")
             print(f"{self.Name}: Layer 4: Segment discarded due to checksum error")
             return("Bad Checksum")
